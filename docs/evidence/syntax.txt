@@ -1,0 +1,7 @@
+PASS bash -n scripts/bootstrap.sh
+PASS bash -n scripts/deploy.sh
+PASS bash -n scripts/doctor.sh
+PASS Python compileall
+PASS node --check web/app.js
+PASS node --check web/text.js
+PASS node --check web/pcm-worklet.js

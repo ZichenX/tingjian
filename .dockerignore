@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+!.env.example
+.venv
+__pycache__
+**/__pycache__
+.pytest_cache
+models
+reports
+*.zip
+node_modules
+*.wav
+*.mp3
+*.m4a
+
+evaluation

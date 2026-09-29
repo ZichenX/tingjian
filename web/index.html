@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#245a49">
+  <meta name="description" content="让家乡话变成看得清的大字。面向听障长者的简洁语音转写工具。">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/assets/manifest.webmanifest">
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/text.js" defer></script>
+  <script src="/assets/app.js" defer></script>
+  <title>听见 · 把话看清楚</title>
+</head>
+<body>
+  <a class="skip" href="#captions">跳到文字区域</a>
+  <header class="site-header wrap">
+    <a class="brand" href="/" aria-label="听见首页"><img src="/assets/icon.svg" width="44" height="44" alt=""><span>听见<small>把话看清楚</small></span></a>
+    <fieldset class="font-control"><legend>文字大小</legend>
+      <button class="font-option selected" data-size="large" aria-pressed="true">大</button>
+      <button class="font-option" data-size="larger" aria-pressed="false">更大</button>
+      <button class="font-option" data-size="largest" aria-pressed="false">特大</button>
+    </fieldset>
+  </header>
+  <main class="wrap">
+    <section class="intro" aria-labelledby="intro-title">
+      <p class="eyebrow">家乡话，也能看得清</p>
+      <h1 id="intro-title">您说话，我写下来。</h1>
+      <p>点一下开始，让说话的人靠近麦克风。<br class="mobile-break">不必大声喊，正常说就好。</p>
+    </section>
+    <div id="notice" class="notice" role="alert" hidden></div>
+    <section class="caption-card" aria-label="听写面板">
+      <div class="caption-heading">
+        <span id="status" class="status"><span class="status-dot" aria-hidden="true"></span><span id="statusText" role="status">正在连接</span></span>
+        <span id="counter" class="counter">山东话 · 中文转写</span>
+      </div>
+      <div id="captions" class="captions" tabindex="0" aria-label="已经确认的听写文字">
+        <div id="empty" class="empty-state">
+          <svg width="58" height="58" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="7" y="7" width="34" height="29" rx="9" stroke="currentColor" stroke-width="2"/><path d="M14 36v7l9-7M15 17h18M15 25h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <p>说的话，会出现在这里</p>
+          <span>先点下面的“开始听写”</span>
+        </div>
+        <div id="finals" role="log" aria-live="polite" aria-relevant="additions text"></div>
+        <div id="partialBox" class="partial-box" hidden><span class="partial-label">正在听 · 这句话还可能修改</span><p id="partial"></p></div>
+      </div>
+      <button id="follow" class="follow" hidden>↓ 回到最新一句</button>
+      <div class="caption-foot"><span id="hint">停顿一下，文字会更完整。</span><meter id="level" min="0" max="1" value="0" aria-label="麦克风声音大小" hidden></meter></div>
+    </section>
+    <div class="main-actions">
+      <button id="record" class="button primary" disabled>
+        <svg id="micIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg>
+        <span id="recordLabel">正在连接</span>
+      </button>
+      <button id="read" class="button secondary" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5V4ZM16 8a6 6 0 0 1 0 8M19 4a11 11 0 0 1 0 16"/></svg>普通话朗读
+      </button>
+    </div>
+    <p class="subhint" id="readHint">先停止听写，再点朗读，避免声音被重复识别。</p>
+    <details id="more" class="more">
+      <summary>上传录音、保存文字等</summary>
+      <div class="secondary-actions">
+        <button id="upload" class="small-button" disabled>上传录音</button>
+        <button id="save" class="small-button">保存文字</button>
+        <button id="clear" class="small-button">清空文字</button>
+        <button id="logout" class="small-button">退出登录</button>
+      </div>
+      <input id="file" type="file" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg,.flac,.aac,.mp4" hidden>
+      <p id="uploadHint">支持手机录音文件。最长 10 分钟，最大 50 MB。</p>
+    </details>
+    <footer>
+      <p>文字可能识别错。姓名、金额、用药等重要内容，请再次确认。</p>
+      <p class="privacy">录音会传到本站服务器处理，不长期保存。文字只留在当前页面，离开前可自行保存。</p>
+    </footer>
+  </main>
+
+  <dialog id="loginDialog" aria-labelledby="loginTitle">
+    <form id="loginForm">
+      <img class="dialog-logo" src="/assets/icon.svg" width="56" height="56" alt="">
+      <h2 id="loginTitle">欢迎使用听见</h2>
+      <p>第一次使用，请让家人帮忙输入访问码。<br>这台设备可记住登录状态。</p>
+      <label for="code">访问码</label>
+      <input id="code" type="password" inputmode="text" autocomplete="current-password" maxlength="128" required>
+      <p id="loginError" class="error-text" role="alert"></p>
+      <button id="loginSubmit" type="submit" class="button primary">进入听见</button>
+      <p class="fine">访问码由本站管理员提供，不需要注册账号。</p>
+    </form>
+  </dialog>
+
+  <dialog id="readDialog" aria-labelledby="readTitle">
+    <div class="dialog-heading"><h2 id="readTitle">普通话朗读</h2><button id="readClose" class="small-button">返回</button></div>
+    <p>可以修改文字，也可以打字让手机帮您说出来。<br>只按文字朗读，不会自动把土话改写成普通话。</p>
+    <label for="speakText">要朗读的文字</label>
+    <textarea id="speakText" rows="5" maxlength="1500" placeholder="在这里写下您想说的话……"></textarea>
+    <div class="speech-options"><label for="speed">语速</label><select id="speed"><option value="0.85">慢一些</option><option value="0.95" selected>正常</option><option value="1.1">快一些</option></select></div>
+    <p id="speechStatus" class="speech-status" role="status">先确认文字，再开始朗读。</p>
+    <audio id="audio" controls preload="none" hidden></audio>
+    <button id="speak" class="button primary">开始朗读</button>
+  </dialog>
+
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">清空这些文字？</h2><p>清空后无法恢复。需要保留的话，请先“保存文字”。</p><div class="confirm-actions"><button id="clearCancel" class="button secondary">先不清空</button><button id="clearConfirm" class="button danger">确认清空</button></div></dialog>
+  <noscript><p class="notice">请启用浏览器 JavaScript 后使用听写功能。</p></noscript>
+</body>
+</html>

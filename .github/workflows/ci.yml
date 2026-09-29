@@ -1,0 +1,29 @@
+name: code-and-container-tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg libgomp1 fonts-noto-cjk
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+      - run: node --test tests/text.test.cjs
+      - run: python -m playwright install --with-deps chromium
+      - run: python tests/browser_smoke.py
+      - run: docker build --target test -t tingjian:test .
+      - run: docker run --rm --network none tingjian:test
+      # These jobs use explicit fake ASR/TTS. They DO NOT certify real-model accuracy.
+      # Real weights must separately pass scripts/self_test.py on the target host.

@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: Chinese sentence boundaries
+ok 1 - Chinese sentence boundaries
+  ---
+  duration_ms: 2.533387
+  type: 'test'
+  ...
+# Subtest: bounded chunks and no punctuation-only calls
+ok 2 - bounded chunks and no punctuation-only calls
+  ---
+  duration_ms: 0.972669
+  type: 'test'
+  ...
+# Subtest: Unicode codepoints are not broken
+ok 3 - Unicode codepoints are not broken
+  ---
+  duration_ms: 0.179626
+  type: 'test'
+  ...
+# Subtest: final captions ordered by recording and segment
+ok 4 - final captions ordered by recording and segment
+  ---
+  duration_ms: 0.227146
+  type: 'test'
+  ...
+# Subtest: actual PCM worklet source: flush tail, little-endian and silence output
+ok 5 - actual PCM worklet source: flush tail, little-endian and silence output
+  ---
+  duration_ms: 2.891507
+  type: 'test'
+  ...
+# Subtest: actual PCM worklet source: stereo downmix and clipping
+ok 6 - actual PCM worklet source: stereo downmix and clipping
+  ---
+  duration_ms: 0.55394
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 56.558637

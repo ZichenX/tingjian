@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "kind": "offline_dom_and_layout_only",
+  "checks": [
+    "login form success/error states with in-memory API fixtures",
+    "final ordering, uncertain partial excluded from export, stale preview cannot overwrite final",
+    "HTML-like recognition text renders safely as literal text",
+    "explicit clear confirmation and cancellation",
+    "editable read-aloud dialog; playback entry disabled while listening",
+    "320/360/390/768 px layouts: largest font and no horizontal page overflow",
+    "no uncaught JavaScript exceptions during these DOM interactions"
+  ],
+  "viewport_metrics": [
+    {
+      "width": 320,
+      "largest_caption_px": 53.0,
+      "horizontal_overflow": false
+    },
+    {
+      "width": 360,
+      "largest_caption_px": 53.0,
+      "horizontal_overflow": false
+    },
+    {
+      "width": 390,
+      "largest_caption_px": 53.0,
+      "horizontal_overflow": false
+    },
+    {
+      "width": 768,
+      "largest_caption_px": 60.0,
+      "horizontal_overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "not_tested": [
+    "real network in browser",
+    "AudioWorklet microphone capture",
+    "actual model recognition",
+    "actual TTS playback",
+    "public HTTPS",
+    "Safari or physical phones"
+  ]
+}

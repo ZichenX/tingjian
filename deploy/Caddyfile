@@ -1,0 +1,24 @@
+{
+    email {$ACME_EMAIL}
+    servers {
+        timeouts {
+            read_header 15s
+            read_body 180s
+            idle 5m
+        }
+    }
+}
+
+{$DOMAIN} {
+    encode zstd gzip
+    header -Server
+    header Strict-Transport-Security "max-age=31536000"
+    request_body {
+        max_size 100MB
+    }
+    reverse_proxy app:8000 {
+        flush_interval -1
+        header_up X-Real-IP {http.request.remote.host}
+    }
+    # Access logs are intentionally off. Do not log cookies, bodies or transcripts.
+}
