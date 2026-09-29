@@ -25,9 +25,16 @@ class Engine:
         self.tts_enabled = settings.tts_enabled
         check_files(settings.model_dir, selected(self.mode, self.tts_enabled))
         shared = {"num_threads": settings.threads, "provider": "cpu", "debug": False}
+        # In dual mode the CTC recognizer is only used for provisional text.
+        # It keeps the same native settings as before; the latency improvement
+        # comes from separating its best-effort queue from AED final work.
         base = settings.model_dir
         self.partial = None
-        if self.mode in {"dual", "ctc-only"}:
+        if self.mode == "dual":
+            p = base / CTC_DIR
+            self.partial = sherpa.OfflineRecognizer.from_fire_red_asr_ctc(
+                model=str(p / "model.int8.onnx"), tokens=str(p / "tokens.txt"), **shared)
+        elif self.mode == "ctc-only":
             p = base / CTC_DIR
             self.partial = sherpa.OfflineRecognizer.from_fire_red_asr_ctc(
                 model=str(p / "model.int8.onnx"), tokens=str(p / "tokens.txt"), **shared)
@@ -68,6 +75,22 @@ class Engine:
         vad.feed(np.zeros(1600, np.float32))
         vad.flush()
         log.info("models_loaded mode=%s tts=%s", self.mode, self.tts_enabled)
+
+    def warmup(self) -> None:
+        """Run one short native call per enabled model before accepting users.
+
+        ONNX Runtime and the native decoder may lazily create kernels and thread
+        pools on their first real request. Warming them with deterministic audio
+        does not change model weights, VAD boundaries, or user-visible text; it
+        moves that one-time cost into startup before readiness is announced.
+        """
+        samples = np.zeros(8000, dtype=np.float32)
+        if self.partial is not None:
+            self.transcribe(samples, partial=True)
+        self.transcribe(samples)
+        if self.tts_enabled:
+            self.speak("您好", 0.95)
+        log.info("models_warmed mode=%s tts=%s", self.mode, self.tts_enabled)
 
     def new_segmenter(self) -> Segmenter:
         cfg = self.sherpa.VadModelConfig()

@@ -12,8 +12,9 @@ Caddy :443（TLS、反代；:80 用于证书/重定向）
 FastAPI + Uvicorn，1 个进程
     ├── 每连接 soxr 流式重采样 → 16kHz
     ├── 每连接独立 Silero VAD 与有界预览缓冲
-    ├── 有界优先级队列 → 1 个 ASR/TTS native 执行线程
-    │     final 0 → upload 1 → tts 2 → preview 3
+    ├── 有界优先级队列 → final/upload/TTS native 执行线程
+    │     final 0 → upload 1 → tts 2
+    ├── dual 模式：独立的小型 CTC preview worker（best effort）
     ├── FireRed CTC/AED，或 SenseVoice / Fun-ASR-Nano
     └── MeloTTS ONNX → WAV
 ```
@@ -22,7 +23,9 @@ FastAPI + Uvicorn，1 个进程
 
 ASR/TTS 权重只在启动时加载；连接不各自复制 ASR。每个 live 连接有独立 VAD 状态。上传解码使用受限 FFmpeg 子进程，VAD 分段在后台线程进行，ASR/TTS 进入统一 native 工作队列。
 
-“优先级”只调整尚未开始的任务，**不能抢占已经执行中的 TTS/ASR**。取消请求也不会假装取消一个已开始的 C++ 调用。原生调用超过配置超时，进程退出，Docker 按重启策略恢复；所有连接会断开，界面保留已经收到的 final 并提示重新开始。
+“优先级”只调整尚未开始的任务，**不能抢占已经执行中的 TTS/ASR**。dual 模式的 CTC preview 使用独立的 best-effort worker，因此不会阻塞尚未开始的 AED final；ctc-only 与 sensevoice 仍把 preview/final 放在同一个 worker，避免并发访问同一个 native recognizer。取消请求也不会假装取消一个已开始的 C++ 调用。原生调用超过配置超时，进程退出，Docker 按重启策略恢复；所有连接会断开，界面保留已经收到的 final 并提示重新开始。
+
+应用在将 `/health/ready` 标为 ready 之前，会对启用的 ASR recognizer 和 TTS 做一次短预热，把 ONNX Runtime 的首次初始化成本移到启动阶段。线程数和公网入口的测量方法见 [延迟分析与优化](LATENCY.md)。
 
 ## 实时协议
 

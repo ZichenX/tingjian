@@ -172,7 +172,7 @@ scripts/evaluate.py     本地人工标注录音的 CER/RTF 对照
 scripts/doctor.sh       不泄露 .env 的诊断
 scripts/local.py        可选、仅回环地址的本地原生开发入口
 Dockerfile / compose.yml / deploy/Caddyfile
-AGENTS.md / docs/       接手指南、维护、安全、评测与验收文档
+AGENTS.md / docs/       接手指南、维护、安全、延迟、评测与验收文档
 tests/                  单元、接口、音频、前端及浏览器测试
 models/                 运行时下载的权重，不在源码包中
 ```
@@ -184,6 +184,7 @@ models/                 运行时下载的权重，不在源码包中
 - 架构、HTTP/WebSocket 协议和性能边界：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - 部署、参数、离线模型和故障排查：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - 集群固定 Tunnel：[docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md)
+- 延迟分析与优化：[docs/LATENCY.md](docs/LATENCY.md)
 - 安全与隐私边界：[docs/SECURITY.md](docs/SECURITY.md)
 - 真实录音 CER/RTF 评测：[docs/EVALUATION.md](docs/EVALUATION.md)
 - 发布前验收：[docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)

@@ -116,16 +116,31 @@ def create_app(settings: Settings | None = None, engine_factory: Callable = Engi
     @asynccontextmanager
     async def lifespan(app):
         worker = InferenceWorker(settings.queue_size, settings.inference_timeout)
+        # In dual mode CTC previews and AED finals use different native
+        # recognizers. Keeping previews on a tiny best-effort lane prevents a
+        # long preview decode from delaying a final result. Modes that reuse
+        # one recognizer stay on the single worker to avoid concurrent access
+        # to the same native object.
+        preview_worker = (InferenceWorker(2, settings.inference_timeout)
+                          if settings.asr_mode == "dual" else worker)
         app.state.ready = False
         app.state.worker = worker
+        app.state.preview_worker = preview_worker
         # There is no "pretend ready" path when an actual model is missing.
         app.state.engine = await asyncio.to_thread(engine_factory, settings)
+        warmup = getattr(app.state.engine, "warmup", None)
+        if warmup is not None:
+            await asyncio.to_thread(warmup)
         await worker.start()
+        if preview_worker is not worker:
+            await preview_worker.start()
         app.state.ready = True
         try:
             yield
         finally:
             app.state.ready = False
+            if preview_worker is not worker:
+                await preview_worker.close()
             await worker.close()
 
     app = FastAPI(title="听见", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
@@ -358,7 +373,8 @@ def create_app(settings: Settings | None = None, engine_factory: Callable = Engi
             async def preview(identifier, audio):
                 valid = lambda: not completed and segmenter.active_id == identifier and identifier > last_final
                 try:
-                    text = await app.state.worker.submit(lambda: app.state.engine.transcribe(audio, True), 3, valid)
+                    text = await app.state.preview_worker.submit(
+                        lambda: app.state.engine.transcribe(audio, True), 3, valid)
                     if text and valid():
                         await send({"type": "partial", "id": identifier, "text": text})
                 except (BusyError, asyncio.CancelledError):
