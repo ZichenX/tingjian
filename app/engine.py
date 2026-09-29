@@ -24,7 +24,7 @@ class Engine:
         self.supports_partial = self.mode in {"dual", "ctc-only", "sensevoice"}
         self.tts_enabled = settings.tts_enabled
         check_files(settings.model_dir, selected(self.mode, self.tts_enabled))
-        shared = {"num_threads": settings.threads, "provider": "cpu", "debug": False}
+        shared = {"num_threads": settings.threads, "provider": settings.provider, "debug": False}
         # In dual mode the CTC recognizer is only used for provisional text.
         # It keeps the same native settings as before; the latency improvement
         # comes from separating its best-effort queue from AED final work.
@@ -74,7 +74,7 @@ class Engine:
         vad = self.new_segmenter()
         vad.feed(np.zeros(1600, np.float32))
         vad.flush()
-        log.info("models_loaded mode=%s tts=%s", self.mode, self.tts_enabled)
+        log.info("models_loaded mode=%s provider=%s tts=%s", self.mode, settings.provider, self.tts_enabled)
 
     def warmup(self) -> None:
         """Run one short native call per enabled model before accepting users.

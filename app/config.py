@@ -17,6 +17,10 @@ class Settings:
     code_hash: str
     model_dir: Path = ROOT / "models"
     asr_mode: str = "dual"
+    # ONNX Runtime execution provider for ASR recognizers.  ``cpu`` remains
+    # the portable default; ``cuda`` requires a CUDA-enabled sherpa-onnx build
+    # and a GPU allocation at runtime.
+    provider: str = "cpu"
     tts_enabled: bool = True
     threads: int = 3
     max_live: int = 2
@@ -49,6 +53,8 @@ class Settings:
             raise ValueError("缺少安全配置，请运行 scripts/configure.py；禁止空访问码启动")
         if self.asr_mode not in MODES:
             raise ValueError("ASR_MODE 不在支持列表: " + ", ".join(MODES))
+        if self.provider not in {"cpu", "cuda"}:
+            raise ValueError("ASR_PROVIDER 只能是 cpu 或 cuda")
         if not 1 <= self.threads <= 32 or not 1 <= self.max_live <= 16:
             raise ValueError("线程或并发配置超出允许范围")
         if not 0.3 <= self.silence <= 2 or not 4 <= self.segment_seconds <= 25:
@@ -72,6 +78,7 @@ class Settings:
             code_hash=os.environ.get("ACCESS_CODE_HASH", ""),
             model_dir=Path(os.environ.get("MODEL_DIR", str(ROOT / "models"))),
             asr_mode=os.environ.get("ASR_MODE", "dual"),
+            provider=os.environ.get("ASR_PROVIDER", "cpu").strip().lower(),
             tts_enabled=os.environ.get("TTS_ENABLED", "1") == "1",
             threads=int(os.environ.get("ASR_THREADS", "3")),
             max_live=int(os.environ.get("MAX_LIVE_SESSIONS", "2")),

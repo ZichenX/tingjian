@@ -98,6 +98,8 @@ sudo bash scripts/deploy.sh
 
 这些是已实现的适配器，不是效果排名。官方 FireRed 文档明确覆盖山东话，但没有你这批山东说话人的 CER。其他模型也必须同录音对照测试。模型体积、训练覆盖与许可来源见 [来源](docs/SOURCES.md)。
 
+ASR 默认使用 CPU。拥有 NVIDIA GPU 且安装了 CUDA-enabled `sherpa-onnx` 时，可在维护窗口把 `.env` 的 `ASR_PROVIDER` 改为 `cuda`；Slurm 作业必须申请 GPU，并让 app 与 CUDA/cuDNN 库位于同一节点。这个选项只改变推理后端，不更换 FireRedASR2 模型；没有 CUDA 版 Python 扩展时不要设置为 `cuda`。
+
 切换只影响服务器配置，老人界面不出现技术菜单：
 
 ```bash

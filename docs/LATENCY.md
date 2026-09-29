@@ -39,6 +39,28 @@ PARTIAL_INTERVAL=1.8
 
 真实模型验收样例中，10.05 秒音频的 ASR 总耗时为 5.761 秒，其中一段 6.26 秒语音的单次推理耗时为 4.256 秒。这是单样例基线，不是并发承诺，也不代表山东话 CER。
 
+## GPU A/B 结果：保持 AED 最终模型，缩短单句推理
+
+本次在另一台 RTX 4090 D 节点上，用同一份 FireRedASR2 AED INT8 模型、同一份 `0.wav`、同样的 3 个 ASR 线程，比较了 CUDA 和 CPU provider。结果是热身后的 5 次重复测量：
+
+| 语音段 | CPU provider | CUDA provider | 最终文字 |
+| --- | ---: | ---: | --- |
+| 1.59 秒 | 1.384 秒 | 0.421 秒 | 一致（去除结果首尾空白后） |
+| 6.26 秒 | 4.072 秒 | 1.316 秒 | 一致（去除结果首尾空白后） |
+
+两段合计由约 5.46 秒降到约 1.74 秒，约 3.1 倍加速。首个 CUDA 调用还包含 CUDA/ORT 初始化，因此服务必须在 readiness 前预热；仓库已有启动预热逻辑。
+
+当前运行环境的 `sherpa_onnx==1.12.40` 是 CPU wheel，传入 `provider=cuda` 会回退到 CPU，不能因为节点有 NVIDIA GPU 就自动获得加速。要使用此项优化，必须同时满足：
+
+1. Slurm 作业申请 `--gres=gpu:1`，并在同一节点运行 app；
+2. 安装或编译启用 CUDA 的 sherpa-onnx Python 扩展；
+3. 加载匹配的 CUDA 12.x 和 cuDNN 9 运行库；
+4. `.env` 设置 `ASR_PROVIDER=cuda`，并重新启动一个维护窗口中的新 app 进程。
+
+预编译 CUDA wheel 的安装方式和版本列表见官方 [sherpa-onnx Python 安装文档](https://github.com/k2-fsa/sherpa/blob/master/docs/source/onnx/python/install.rst) 和 [CUDA wheel 列表](https://k2-fsa.github.io/sherpa/onnx/cuda.html)。如果目标系统的 glibc 低于 wheel 要求，应按官方方式从源码启用 `SHERPA_ONNX_ENABLE_GPU=ON`；对应的构建开关见 [sherpa-onnx CMake 配置](https://github.com/k2-fsa/sherpa-onnx/blob/master/CMakeLists.txt)。
+
+CPU 环境仍使用默认的 `ASR_PROVIDER=cpu`，无需更换模型，也不会改变当前部署行为。GPU provider 只在独立 A/B 验收通过后切换；当前公网进程没有被重启。
+
 ## 本次低风险改动
 
 ### 1. dual 模式分离预览队列
@@ -90,7 +112,8 @@ done
 
 | 参数/方案 | 延迟收益 | 对效果的风险 |
 | --- | --- | --- |
-| ASR 线程 3 → 6/8 | 可能明显降低 native 推理时间 | 需验证线程争用和数值一致性 |
+| ASR 线程 3 → 6/8 | 在本次 8 CPU 隔离测量中只有约 2.5%～3% 改善，不能代替 GPU | 需验证线程争用和数值一致性 |
+| CUDA provider | 本次同样模型和输出约 3.1 倍加速 | 需要 CUDA 版 sherpa-onnx、GPU 作业和独立部署验收 |
 | dual 预览单独 worker | 减少预览阻塞 final | 增加 CPU 并行度 |
 | 启动预热 | 降低首次请求冷启动 | 只增加启动时间 |
 | 固定 Named Tunnel | 减少入口抖动和额外代理 | 不能替代模型压测 |

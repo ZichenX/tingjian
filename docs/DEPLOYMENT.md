@@ -48,6 +48,7 @@ sudo bash scripts/deploy.sh
 | 参数 | 默认 | 含义/边界 |
 |---|---:|---|
 | `ASR_MODE` | dual | 用 `--engine` 切换 |
+| `ASR_PROVIDER` | cpu | `cpu` 可直接运行；`cuda` 需要 CUDA 版 sherpa-onnx、CUDA/cuDNN 和带 GPU 的作业节点 |
 | `TTS_ENABLED` | 1 | 用 `--tts on/off` |
 | `ASR_THREADS` | 3 | native ASR 内部线程；不是用户数 |
 | `APP_MEMORY` | 12g | 应用/工具容器内存上限；为系统/Caddy 保留内存 |

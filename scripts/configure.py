@@ -48,7 +48,7 @@ def main():
     parser.add_argument("--accept-model-licenses", action="store_true")
     parser.add_argument("--rotate-code", action="store_true", help="Also revoke ALL existing cookies by rotating the signing secret")
     parser.add_argument("--code-file", type=Path, help="Read a code from a protected file instead of a shell argument")
-    parser.add_argument("--get", choices=["DOMAIN", "APP_ORIGIN", "ASR_MODE", "TTS_ENABLED", "MODEL_LICENSES_ACK"])
+    parser.add_argument("--get", choices=["DOMAIN", "APP_ORIGIN", "ASR_MODE", "ASR_PROVIDER", "TTS_ENABLED", "MODEL_LICENSES_ACK"])
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="Change a documented non-secret parameter")
     parser.add_argument("--dev", action="store_true", help="LOCAL DEVELOPMENT ONLY: origin http://localhost:8000")
     args = parser.parse_args()
@@ -107,7 +107,7 @@ def main():
         if not 12 <= len(code) <= 128: raise SystemExit("访问码必须是 12～128 个字符")
         values["ACCESS_CODE_HASH"] = hash_code(code)
         values["SESSION_SECRET"] = secrets.token_urlsafe(48)
-    editable = {"ASR_THREADS","MAX_LIVE_SESSIONS","APP_MEMORY","MAX_UPLOAD_MB","MAX_UPLOAD_SECONDS", "MAX_SESSION_SECONDS", "COOKIE_DAYS","VAD_SILENCE","SEGMENT_SECONDS","PARTIAL_INTERVAL","INFERENCE_TIMEOUT","NANO_HOTWORDS","MODEL_BASE_URL"}
+    editable = {"ASR_PROVIDER", "ASR_THREADS","MAX_LIVE_SESSIONS","APP_MEMORY","MAX_UPLOAD_MB","MAX_UPLOAD_SECONDS", "MAX_SESSION_SECONDS", "COOKIE_DAYS","VAD_SILENCE","SEGMENT_SECONDS","PARTIAL_INTERVAL","INFERENCE_TIMEOUT","NANO_HOTWORDS","MODEL_BASE_URL"}
     for item in args.set:
         key, sep, value = item.partition("=")
         if not sep or key not in editable: raise SystemExit("--set 只支持文档列出的非敏感运行参数")
