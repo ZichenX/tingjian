@@ -12,13 +12,10 @@ from playwright.sync_api import sync_playwright, expect
 ROOT=Path(__file__).resolve().parents[1]
 
 FETCH_FIXTURE=r'''
-let testLoggedIn=false;
 window.fetch=async function(path, options={}) {
   let headers={'Content-Type':'application/json'};
   const result=(value,status=200)=>Promise.resolve(new Response(JSON.stringify(value),{status,headers}));
-  if(path==='/api/session')return testLoggedIn?result({authenticated:true,csrf:'offline-dom-test',tts:true,partial:true,engine:'dual',max_upload_mb:50,max_upload_seconds:600,max_session_seconds:1800}):result({detail:'请先输入访问码'},401);
-  if(path==='/api/login'){const code=JSON.parse(options.body).code;if(code!=='test-only-code-123')return result({detail:'访问码不正确，请再核对一下'},401);testLoggedIn=true;return result({ok:true});}
-  if(path==='/api/logout'){testLoggedIn=false;return result({ok:true});}
+  if(path==='/api/session')return result({authenticated:true,auth_required:false,csrf:'offline-dom-test',tts:true,partial:true,engine:'dual',max_upload_mb:50,max_upload_seconds:600,max_session_seconds:1800});
   throw new Error('Offline DOM test does not implement this API: '+path);
 };
 '''
@@ -43,12 +40,9 @@ def main():
         page.add_script_tag(content=FETCH_FIXTURE)
         page.add_script_tag(content=(ROOT/'web/text.js').read_text())
         page.add_script_tag(content=(ROOT/'web/app.js').read_text())
-        expect(page.locator('#loginDialog')).to_be_visible()
-        page.locator('#code').fill('wrong');page.locator('#loginSubmit').click()
-        expect(page.locator('#loginError')).to_contain_text('不正确')
-        page.locator('#code').fill('test-only-code-123');page.locator('#loginSubmit').click()
-        expect(page.locator('#loginDialog')).not_to_be_visible();expect(page.locator('#record')).to_be_enabled()
-        checks.append('login form success/error states with in-memory API fixtures')
+        expect(page.locator('#loginDialog')).to_have_count(0)
+        expect(page.locator('#record')).to_be_enabled()
+        checks.append('direct entry without an access-code dialog with in-memory API fixtures')
         page.evaluate("addFinal(1,{id:1,text:'第二句'});addFinal(1,{id:0,text:'第一句'});")
         assert page.locator('#finals p').all_text_contents()==['第一句','第二句']
         page.evaluate("showPartial(1,{id:2,text:'未确认的第三句'});uncertainPartial();")

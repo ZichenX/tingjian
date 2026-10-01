@@ -32,7 +32,7 @@ sudo ss -ltnp | grep -E ':80 |:443 |:8000 ' || true
 
 专用主机还需要管理员能够修改 DNS、云安全组和主机防火墙。集群路径不需要入站端口，但必须确认 Slurm 作业在 connector 运行期间不会结束。
 
-## 2. 配置访问码和域名
+## 2. 配置域名与访问模式
 
 先阅读 [MODEL_LICENSES.md](../MODEL_LICENSES.md)。`configure.py` 不执行 shell，不把明文访问码写入命令行；`.env` 会以 600 权限原子写入：
 
@@ -45,9 +45,9 @@ python3 scripts/configure.py \
   --accept-model-licenses
 ```
 
-交互式命令会隐式询问访问码；留空会生成一次性显示的 12 位数字码。把它存放在管理员密码管理器中，不要写进 README、工单、shell 历史或 URL。
+默认部署关闭访问码，配置命令不会询问登录码；浏览器首次访问时自动获得签名会话。若确实需要兼容的访问码流程，增加 `--set AUTH_REQUIRED=1`，再通过权限为 600 的文件提供访问码，不要写进 README、工单、shell 历史或 URL。
 
-无交互环境使用权限为 600 的临时文件：
+启用兼容访问码模式时，无交互环境使用权限为 600 的临时文件：
 
 ```bash
 umask 077
@@ -115,7 +115,7 @@ sudo docker compose ps
 sudo docker compose logs --tail=80 app caddy
 ```
 
-从手机移动网络而非服务器或同一 Wi-Fi 完成 [目标环境验收单](ACCEPTANCE.md)。至少验证登录、麦克风授权、实时听写停止时的最后一句、录音上传、TTS、断网和切后台。
+从手机移动网络而非服务器或同一 Wi-Fi 完成 [目标环境验收单](ACCEPTANCE.md)。至少验证直接进入、麦克风授权、实时听写停止时的最后一句、录音上传、TTS、断网和切后台；若启用兼容模式再验证登录。
 
 改变 `.env` 后必须重新执行 `sudo bash scripts/deploy.sh`；单独 `docker compose restart` 不会重新读取新的 Compose 环境变量。部署脚本会短暂停机，不是零停机发布。
 
@@ -204,8 +204,8 @@ sudo docker compose run --rm --no-deps \
 
 - 发布失败：先保留 `docker compose logs`、`models/acceptance/` 和镜像 ID；不要删除证据后重试。
 - Docker 部署会把上一次镜像标为 `tingjian:previous`，但模型目录由当前 lock 管理。回滚前确认代码、`.env` 和模型版本匹配，再由管理员执行 `docker compose up -d`。
-- 访问码泄露：运行 `python3 scripts/configure.py --rotate-code`，它会同时轮换会话签名密钥；随后重新部署，旧 Cookie 失效。
-- 访问码只在首次配置或轮换时显示一次；不要从日志中寻找它。
+- 兼容模式访问码泄露：运行 `python3 scripts/configure.py --set AUTH_REQUIRED=1 --rotate-code`，它会同时轮换会话签名密钥；随后重新部署，旧 Cookie 失效。
+- 默认免访问码模式不生成或记录访问码；不要把会话 Cookie 放入日志或 URL。
 - 删除模型缓存前确认没有正在运行的 app/self-test；用户录音不应写入仓库或公开目录。
 
 ## 7. 部署记录模板

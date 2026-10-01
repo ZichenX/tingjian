@@ -20,7 +20,6 @@ from playwright.sync_api import sync_playwright, expect
 from app.audio import wav_bytes
 from app.config import Settings
 from app.main import create_app
-from app.security import hash_code
 from tests.fakes import FakeEngine
 
 
@@ -30,8 +29,8 @@ def main():
     p.add_argument('--chromium',default=os.getenv('CHROMIUM_PATH') or shutil.which('chromium'))
     args=p.parse_args();args.output_dir.mkdir(parents=True,exist_ok=True)
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
-    origin=f'http://127.0.0.1:{port}';code='test-only-code-123'
-    settings=Settings(origin=origin,secret='browser-test-secret-'*4,code_hash=hash_code(code),session_seconds=60,max_upload_seconds=10)
+    origin=f'http://127.0.0.1:{port}'
+    settings=Settings(origin=origin,secret='browser-test-secret-'*4,code_hash='',auth_required=False,session_seconds=60,max_upload_seconds=10)
     app=create_app(settings,FakeEngine)
     server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=port,log_level='warning',access_log=False))
     thread=threading.Thread(target=server.run,daemon=True);thread.start()
@@ -49,10 +48,9 @@ def main():
                 f'--use-file-for-fake-audio-capture={wav}'])
             context=browser.new_context(viewport={'width':1280,'height':1100},permissions=['microphone'],locale='zh-CN')
             page=context.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
-            page.goto(origin);expect(page.locator('#loginDialog')).to_be_visible()
-            page.locator('#code').fill(code);page.locator('#loginSubmit').click()
-            expect(page.locator('#loginDialog')).not_to_be_visible();expect(page.locator('#record')).to_be_enabled()
-            checks.append('access-code login through actual browser/HTTP')
+            page.goto(origin);expect(page.locator('#loginDialog')).to_have_count(0)
+            expect(page.locator('#record')).to_be_enabled()
+            checks.append('direct entry without an access-code dialog through actual browser/HTTP')
             page.locator('[data-size="largest"]').click()
             assert page.locator('body').get_attribute('data-font')=='largest'
             page.reload();expect(page.locator('#record')).to_be_enabled()

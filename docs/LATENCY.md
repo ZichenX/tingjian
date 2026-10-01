@@ -127,7 +127,7 @@ done
 
 应该把以下三个时间分开：
 
-1. 页面加载/登录到 WebSocket ready；
+1. 页面加载到 WebSocket ready（兼容访问码模式还要单独记录登录时间）；
 2. 说话停止到第一个 final；
 3. 停止到 done。
 

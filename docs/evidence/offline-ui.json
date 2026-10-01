@@ -2,7 +2,7 @@
   "passed": true,
   "kind": "offline_dom_and_layout_only",
   "checks": [
-    "login form success/error states with in-memory API fixtures",
+    "direct entry without an access-code dialog with in-memory API fixtures",
     "final ordering, uncertain partial excluded from export, stale preview cannot overwrite final",
     "HTML-like recognition text renders safely as literal text",
     "explicit clear confirmation and cancellation",

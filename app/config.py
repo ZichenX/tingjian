@@ -21,6 +21,9 @@ class Settings:
     # the portable default; ``cuda`` requires a CUDA-enabled sherpa-onnx build
     # and a GPU allocation at runtime.
     provider: str = "cpu"
+    # Kept as a backwards-compatible escape hatch for existing installations.
+    # New deployments set AUTH_REQUIRED=0 and do not ask users for a code.
+    auth_required: bool = True
     tts_enabled: bool = True
     threads: int = 3
     max_live: int = 2
@@ -49,8 +52,10 @@ class Settings:
             raise ValueError("APP_ORIGIN 必须是无路径的完整站点来源，例如 https://listen.example.com")
         if u.scheme != "https" and not (u.scheme == "http" and u.hostname in {"localhost", "127.0.0.1"}):
             raise ValueError("公网必须使用 HTTPS；HTTP 仅允许 localhost/127.0.0.1")
-        if len(self.secret) < 32 or not re.fullmatch(r"pbkdf2_sha256:310000:[a-f0-9]{32}:[a-f0-9]{64}", self.code_hash):
-            raise ValueError("缺少安全配置，请运行 scripts/configure.py；禁止空访问码启动")
+        if len(self.secret) < 32:
+            raise ValueError("缺少安全配置，请运行 scripts/configure.py")
+        if self.auth_required and not re.fullmatch(r"pbkdf2_sha256:310000:[a-f0-9]{32}:[a-f0-9]{64}", self.code_hash):
+            raise ValueError("启用访问码时必须提供有效的 ACCESS_CODE_HASH")
         if self.asr_mode not in MODES:
             raise ValueError("ASR_MODE 不在支持列表: " + ", ".join(MODES))
         if self.provider not in {"cpu", "cuda"}:
@@ -72,6 +77,8 @@ class Settings:
     def from_env(cls) -> "Settings":
         if os.environ.get("TTS_ENABLED", "1") not in {"0", "1"}:
             raise ValueError("TTS_ENABLED 只能为 0 或 1")
+        if os.environ.get("AUTH_REQUIRED", "1") not in {"0", "1"}:
+            raise ValueError("AUTH_REQUIRED 只能为 0 或 1")
         s = cls(
             origin=os.environ.get("APP_ORIGIN", ""),
             secret=os.environ.get("SESSION_SECRET", ""),
@@ -79,6 +86,7 @@ class Settings:
             model_dir=Path(os.environ.get("MODEL_DIR", str(ROOT / "models"))),
             asr_mode=os.environ.get("ASR_MODE", "dual"),
             provider=os.environ.get("ASR_PROVIDER", "cpu").strip().lower(),
+            auth_required=os.environ.get("AUTH_REQUIRED", "1") == "1",
             tts_enabled=os.environ.get("TTS_ENABLED", "1") == "1",
             threads=int(os.environ.get("ASR_THREADS", "3")),
             max_live=int(os.environ.get("MAX_LIVE_SESSIONS", "2")),

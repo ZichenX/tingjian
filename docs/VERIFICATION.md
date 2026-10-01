@@ -8,7 +8,7 @@
 |---|---|---|
 | Python 测试 | 72 passed | 配置、凭据、音频、队列、下载/解压安全逻辑、HTTP/WS 接口等 |
 | Node 测试 | 6 passed | 文字处理、分句，以及实际 AudioWorklet 源码的 PCM/尾帧逻辑 |
-| Chromium 离线 DOM/布局 | 7 组检查通过 | 登录状态、文字顺序、临时稿、转义、清空确认、朗读窗口、窄屏布局 |
+| Chromium 离线 DOM/布局 | 7 组检查通过 | 会话状态、文字顺序、临时稿、转义、清空确认、朗读窗口、窄屏布局 |
 | Shell 语法 | 所有 scripts/*.sh 通过 bash -n | 仅语法，不等于 Docker/部署命令已经执行 |
 | Python/JavaScript 语法 | compileall / node --check 通过 | 仅解析和编译检查 |
 

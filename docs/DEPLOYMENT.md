@@ -23,7 +23,7 @@ sudo ss -ltnp | grep -E ':80 |:443 |:8000 ' || true
 
 ## 配置原则
 
-`configure.py` 只读写简单 KEY=VALUE，不执行 shell；`.env` 权限 600。不要 `source` 不可信 `.env`，不要把明文访问码作为命令参数，不要提交 `.env`。首次无需手工复制 `.env.example`；配置脚本会自动加载默认值。
+`configure.py` 只读写简单 KEY=VALUE，不执行 shell；`.env` 权限 600。不要 `source` 不可信 `.env`，不要提交 `.env`。默认部署不要求访问码，浏览器打开站点即可使用；只有明确设置 `AUTH_REQUIRED=1` 时才启用兼容的访问码流程。首次无需手工复制 `.env.example`；配置脚本会自动加载默认值。
 
 **同一个管理员用户管理源代码和 .env；Docker 操作用 sudo 即可。** 如果曾用 sudo 生成 `.env` 而当前用户无法读取，需要用同一账户管理或谨慎修正文件所有者，不要改成 644 向所有人开放。
 
@@ -49,6 +49,7 @@ sudo bash scripts/deploy.sh
 |---|---:|---|
 | `ASR_MODE` | dual | 用 `--engine` 切换 |
 | `ASR_PROVIDER` | cpu | `cpu` 可直接运行；`cuda` 需要 CUDA 版 sherpa-onnx、CUDA/cuDNN 和带 GPU 的作业节点 |
+| `AUTH_REQUIRED` | 0 | 0=直接进入；1=启用兼容的访问码登录 |
 | `TTS_ENABLED` | 1 | 用 `--tts on/off` |
 | `ASR_THREADS` | 3 | native ASR 内部线程；不是用户数 |
 | `APP_MEMORY` | 12g | 应用/工具容器内存上限；为系统/Caddy 保留内存 |
@@ -56,7 +57,7 @@ sudo bash scripts/deploy.sh
 | `MAX_UPLOAD_MB` | 50 | 每文件体积；最多可设置 100；Caddy 全局上限 100MB |
 | `MAX_UPLOAD_SECONDS` | 600 | 每文件解码时长；最大 1800 秒 |
 | `MAX_SESSION_SECONDS` | 1800 | 每次实时听写最长 30 分钟；到时定稿、需重新开始 |
-| `COOKIE_DAYS` | 30 | 登录有效期；共享设备可设更短 |
+| `COOKIE_DAYS` | 30 | 签名浏览器会话和 CSRF 有效期；共享设备可设更短 |
 | `VAD_SILENCE` | 0.7 | 语音停顿阈值；0.3～2 秒 |
 | `SEGMENT_SECONDS` | 12 | 连续讲话强制切段目标；4～25 秒 |
 | `PARTIAL_INTERVAL` | 1.8 | 预览最小间隔；1～10 秒；繁忙时可跳过 |
@@ -149,14 +150,14 @@ sudo bash scripts/doctor.sh
 
 只有上一步 previous 确实是已验收版本时才使用。否则从受控备份 `docker load` 并把正确 image ID 标为 local。模型目录版本固定，切模式后旧模型默认保留，方便回退；磁盘清理应由管理员确认哪些版本不再用。
 
-## 访问码轮换
+## 兼容访问码轮换
 
 ```bash
-python3 scripts/configure.py --rotate-code
+python3 scripts/configure.py --set AUTH_REQUIRED=1 --rotate-code
 sudo bash scripts/deploy.sh
 ```
 
-同时轮换签名密钥，使旧 Cookie 全部无效；不是只修改哈希。普通“退出登录”只清浏览器 Cookie，不能撤销已被复制的签名 Cookie。访问码泄露应立即轮换并审查云端访问/资源状况。
+仅在 `AUTH_REQUIRED=1` 时使用。命令会同时轮换签名密钥，使旧 Cookie 全部无效；不是只修改哈希。默认免访问码模式不需要轮换访问码。普通“退出登录”只清浏览器 Cookie，不能撤销已被复制的签名 Cookie。兼容模式访问码泄露应立即轮换并审查云端访问/资源状况。
 
 ## 常见故障
 

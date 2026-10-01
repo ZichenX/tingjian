@@ -157,6 +157,12 @@ def create_app(settings: Settings | None = None, engine_factory: Callable = Engi
 
     def session_required(request, write: bool = False):
         session = auth.read(request.cookies.get(settings.cookie_name))
+        if not session and not settings.auth_required:
+            token, session = auth.issue()
+            # The session is still signed and scoped to this browser, but no
+            # access code is needed.  /api/session attaches this token as a
+            # cookie before the first write or WebSocket connection.
+            request.state.session_token = token
         if not session:
             raise HTTPException(401, "请先输入访问码")
         if write:
@@ -185,13 +191,21 @@ def create_app(settings: Settings | None = None, engine_factory: Callable = Engi
     async def session_info(request: Request):
         s = session_required(request)
         engine = app.state.engine
-        return {"authenticated": True, "csrf": auth.csrf(s), "tts": engine.tts_enabled,
+        response = JSONResponse({"authenticated": True,
+                "auth_required": settings.auth_required, "csrf": auth.csrf(s), "tts": engine.tts_enabled,
                 "partial": engine.supports_partial, "engine": settings.asr_mode,
                 "max_upload_mb": settings.max_upload_mb, "max_upload_seconds": settings.max_upload_seconds,
-                "max_session_seconds": settings.session_seconds, "max_tts_chars": 120}
+                "max_session_seconds": settings.session_seconds, "max_tts_chars": 120})
+        token = getattr(request.state, "session_token", None)
+        if token:
+            response.set_cookie(settings.cookie_name, token, max_age=settings.cookie_days * 86400,
+                                secure=settings.secure, httponly=True, samesite="strict", path="/")
+        return response
 
     @app.post("/api/login")
     async def login(request: Request):
+        if not settings.auth_required:
+            raise HTTPException(404, "访问码登录已关闭")
         origin_required(request)
         if not rates.allow("login-all", 100, 600) or not rates.allow("login:" + peer_ip(request), 10, 600):
             raise HTTPException(429, "尝试次数较多，请十分钟后重试")
@@ -242,7 +256,12 @@ def create_app(settings: Settings | None = None, engine_factory: Callable = Engi
             raise BusyError()
         try:
             data = await app.state.worker.submit(lambda: app.state.engine.speak(text.strip(), speed), 2)
-            return Response(data, media_type="audio/wav", headers={"Content-Disposition": 'inline; filename="mandarin.wav"'})
+            response = Response(data, media_type="audio/wav", headers={"Content-Disposition": 'inline; filename="mandarin.wav"'})
+            token = getattr(request.state, "session_token", None)
+            if token:
+                response.set_cookie(settings.cookie_name, token, max_age=settings.cookie_days * 86400,
+                                    secure=settings.secure, httponly=True, samesite="strict", path="/")
+            return response
         except BusyError:
             raise
         except Exception:
@@ -316,6 +335,8 @@ def create_app(settings: Settings | None = None, engine_factory: Callable = Engi
     @app.websocket("/api/live")
     async def socket(ws: WebSocket):
         session = auth.read(ws.cookies.get(settings.cookie_name))
+        if not session and not settings.auth_required:
+            _, session = auth.issue()
         if not session or ws.headers.get("origin") != settings.origin:
             await ws.close(code=1008)
             return

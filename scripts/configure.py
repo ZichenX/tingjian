@@ -48,7 +48,7 @@ def main():
     parser.add_argument("--accept-model-licenses", action="store_true")
     parser.add_argument("--rotate-code", action="store_true", help="Also revoke ALL existing cookies by rotating the signing secret")
     parser.add_argument("--code-file", type=Path, help="Read a code from a protected file instead of a shell argument")
-    parser.add_argument("--get", choices=["DOMAIN", "APP_ORIGIN", "ASR_MODE", "ASR_PROVIDER", "TTS_ENABLED", "MODEL_LICENSES_ACK"])
+    parser.add_argument("--get", choices=["DOMAIN", "APP_ORIGIN", "ASR_MODE", "ASR_PROVIDER", "AUTH_REQUIRED", "TTS_ENABLED", "MODEL_LICENSES_ACK"])
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="Change a documented non-secret parameter")
     parser.add_argument("--dev", action="store_true", help="LOCAL DEVELOPMENT ONLY: origin http://localhost:8000")
     args = parser.parse_args()
@@ -90,28 +90,42 @@ def main():
     if args.engine: values["ASR_MODE"] = args.engine
     if args.tts: values["TTS_ENABLED"] = "1" if args.tts == "on" else "0"
     if args.accept_model_licenses: values["MODEL_LICENSES_ACK"] = "1"
-    if initial or args.rotate_code or args.code_file:
-        if args.code_file:
-            if args.code_file.stat().st_mode & 0o077:
-                raise SystemExit("访问码文件权限过宽；请先 chmod 600 该文件")
-            if args.code_file.stat().st_size > 1024:
-                raise SystemExit("访问码文件过大")
-            code = args.code_file.read_text().strip()
-        elif sys.stdin.isatty():
-            code = getpass.getpass("设置访问码（至少 12 字符；留空自动生成 12 位数字）: ")
-        else:
-            raise SystemExit("非交互首次部署请用 --code-file 提供至少 12 字符访问码；禁止通过命令行参数传明文")
-        if not code:
-            code = "".join(secrets.choice("0123456789") for _ in range(12))
-            print("请安全记下访问码（只显示这一次）:", code)
-        if not 12 <= len(code) <= 128: raise SystemExit("访问码必须是 12～128 个字符")
-        values["ACCESS_CODE_HASH"] = hash_code(code)
-        values["SESSION_SECRET"] = secrets.token_urlsafe(48)
-    editable = {"ASR_PROVIDER", "ASR_THREADS","MAX_LIVE_SESSIONS","APP_MEMORY","MAX_UPLOAD_MB","MAX_UPLOAD_SECONDS", "MAX_SESSION_SECONDS", "COOKIE_DAYS","VAD_SILENCE","SEGMENT_SECONDS","PARTIAL_INTERVAL","INFERENCE_TIMEOUT","NANO_HOTWORDS","MODEL_BASE_URL"}
+    editable = {"ASR_PROVIDER", "AUTH_REQUIRED", "ASR_THREADS","MAX_LIVE_SESSIONS","APP_MEMORY","MAX_UPLOAD_MB","MAX_UPLOAD_SECONDS", "MAX_SESSION_SECONDS", "COOKIE_DAYS","VAD_SILENCE","SEGMENT_SECONDS","PARTIAL_INTERVAL","INFERENCE_TIMEOUT","NANO_HOTWORDS","MODEL_BASE_URL"}
     for item in args.set:
         key, sep, value = item.partition("=")
         if not sep or key not in editable: raise SystemExit("--set 只支持文档列出的非敏感运行参数")
         values[key] = value
+    auth_explicitly_disabled = any(item.partition("=")[0] == "AUTH_REQUIRED" and item.partition("=")[2] == "0" for item in args.set)
+    if values.get("AUTH_REQUIRED", "0") != "1":
+        # Disabling the compatibility flow also removes its verifier material.
+        # Rotate the signer when this is an explicit transition so old cookies
+        # cannot be reused after an access policy change.
+        values["ACCESS_CODE_HASH"] = ""
+        if auth_explicitly_disabled:
+            values["SESSION_SECRET"] = secrets.token_urlsafe(48)
+    if initial or args.rotate_code or args.code_file:
+        if values.get("AUTH_REQUIRED", "0") != "1":
+            if args.code_file:
+                raise SystemExit("当前已关闭访问码；不要再提供 --code-file")
+            values["ACCESS_CODE_HASH"] = ""
+            values["SESSION_SECRET"] = secrets.token_urlsafe(48)
+        else:
+            if args.code_file:
+                if args.code_file.stat().st_mode & 0o077:
+                    raise SystemExit("访问码文件权限过宽；请先 chmod 600 该文件")
+                if args.code_file.stat().st_size > 1024:
+                    raise SystemExit("访问码文件过大")
+                code = args.code_file.read_text().strip()
+            elif sys.stdin.isatty():
+                code = getpass.getpass("设置访问码（至少 12 字符；留空自动生成 12 位数字）: ")
+            else:
+                raise SystemExit("启用访问码时请用 --code-file 提供至少 12 字符访问码；禁止通过命令行参数传明文")
+            if not code:
+                code = "".join(secrets.choice("0123456789") for _ in range(12))
+                print("请安全记下访问码（只显示这一次）:", code)
+            if not 12 <= len(code) <= 128: raise SystemExit("访问码必须是 12～128 个字符")
+            values["ACCESS_CODE_HASH"] = hash_code(code)
+            values["SESSION_SECRET"] = secrets.token_urlsafe(48)
     # Reuse application validation before replacing a previously working file.
     from app.config import Settings
     before = dict(os.environ)

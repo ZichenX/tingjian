@@ -17,7 +17,6 @@ function setState(next, label) {
   $("read").disabled = !config?.tts || busy || speaking;
   $("upload").disabled = !config || busy || speaking;
   $("clear").disabled = busy || speaking;
-  $("logout").disabled = busy || speaking;
   $("level").hidden = next !== "listening";
 }
 async function api(path, options = {}) {
@@ -27,9 +26,9 @@ async function api(path, options = {}) {
   if (!response.ok) {
     let message = `请求未成功（${response.status}）`;
     try { message = (await response.json()).detail || message; } catch (_) { /* preserve status */ }
-    if (response.status === 401 && path !== "/api/login") {
+    if (response.status === 401) {
       config = null;
-      if (!$("loginDialog").open) $("loginDialog").showModal();
+      setState("error", "连接未成功");
     }
     throw new Error(message);
   }
@@ -38,8 +37,7 @@ async function api(path, options = {}) {
 async function refreshSession() {
   const response = await fetch("/api/session", {credentials:"same-origin",cache:"no-store"});
   if (response.status === 401) {
-    config = null; setState("idle", "请先输入访问码");
-    if (!$("loginDialog").open) $("loginDialog").showModal();
+    config = null; setState("error", "连接未成功");
     return false;
   }
   if (!response.ok) throw new Error("服务器暂时无法连接，请稍后点击“重新连接”");
@@ -197,15 +195,6 @@ $("record").addEventListener("click", async () => {
   if (state === "error") { try { await refreshSession(); notice(); } catch (e) {notice(e.message);} return; }
   await startListening();
 });
-$("loginForm").addEventListener("submit", async event => {
-  event.preventDefault(); $("loginSubmit").disabled = true; $("loginError").textContent = "正在验证……";
-  try {
-    await api("/api/login", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:$("code").value})});
-    $("code").value = ""; await refreshSession(); $("loginDialog").close(); notice(); $("record").focus();
-  } catch (e) {$("loginError").textContent = e.message;}
-  finally {$("loginSubmit").disabled = false;}
-});
-$("loginDialog").addEventListener("cancel", e=>e.preventDefault());
 $("captions").addEventListener("scroll", () => {
   const el = $("captions"); followLatest = el.scrollHeight-el.scrollTop-el.clientHeight < 65;
   $("follow").hidden = followLatest;
@@ -227,9 +216,6 @@ $("clear").addEventListener("click",()=>$("confirmDialog").showModal());
 $("clearCancel").addEventListener("click",()=>$("confirmDialog").close());
 $("clearConfirm").addEventListener("click",()=>{
   records.clear();$("finals").replaceChildren();$("partialBox").hidden=true;$("empty").hidden=false;$("counter").textContent="山东话 · 中文转写";notice();$("confirmDialog").close();
-});
-$("logout").addEventListener("click",async()=>{
-  try {await api("/api/logout",{method:"POST"});config=null;records.clear();$("finals").replaceChildren();$("partialBox").hidden=true;$("partial").textContent="";$("speakText").value="";$("counter").textContent="山东话 · 中文转写";$("empty").hidden=false;await refreshSession();}catch(e){notice(e.message);}
 });
 $("upload").addEventListener("click",()=>$("file").click());
 $("file").addEventListener("change",async()=>{

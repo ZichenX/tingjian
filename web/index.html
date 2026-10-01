@@ -62,7 +62,6 @@
         <button id="upload" class="small-button" disabled>上传录音</button>
         <button id="save" class="small-button">保存文字</button>
         <button id="clear" class="small-button">清空文字</button>
-        <button id="logout" class="small-button">退出登录</button>
       </div>
       <input id="file" type="file" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg,.flac,.aac,.mp4" hidden>
       <p id="uploadHint">支持手机录音文件。最长 10 分钟，最大 50 MB。</p>
@@ -72,19 +71,6 @@
       <p class="privacy">录音会传到本站服务器处理，不长期保存。文字只留在当前页面，离开前可自行保存。</p>
     </footer>
   </main>
-
-  <dialog id="loginDialog" aria-labelledby="loginTitle">
-    <form id="loginForm">
-      <img class="dialog-logo" src="/assets/icon.svg" width="56" height="56" alt="">
-      <h2 id="loginTitle">欢迎使用听见</h2>
-      <p>第一次使用，请让家人帮忙输入访问码。<br>这台设备可记住登录状态。</p>
-      <label for="code">访问码</label>
-      <input id="code" type="password" inputmode="text" autocomplete="current-password" maxlength="128" required>
-      <p id="loginError" class="error-text" role="alert"></p>
-      <button id="loginSubmit" type="submit" class="button primary">进入听见</button>
-      <p class="fine">访问码由本站管理员提供，不需要注册账号。</p>
-    </form>
-  </dialog>
 
   <dialog id="readDialog" aria-labelledby="readTitle">
     <div class="dialog-heading"><h2 id="readTitle">普通话朗读</h2><button id="readClose" class="small-button">返回</button></div>

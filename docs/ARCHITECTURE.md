@@ -4,7 +4,7 @@
 
 ```text
 手机/平板/电脑浏览器（无模型、无 CDN）
-    │ HTTPS / WSS；访问码会话 Cookie
+    │ HTTPS / WSS；自动签发的会话 Cookie
     ▼
 Caddy :443（TLS、反代；:80 用于证书/重定向）
     │ 内部 Docker 网络，不公开 :8000
@@ -29,7 +29,7 @@ ASR/TTS 权重只在启动时加载；连接不各自复制 ASR。每个 live �
 
 ## 实时协议
 
-同源 `wss://站点/api/live`，需要 Cookie 和正确 Origin。不要把访问码或 Cookie 放 URL。
+同源 `wss://站点/api/live`，需要自动签发的 Cookie 和正确 Origin。不要把 Cookie 放 URL。
 
 首条客户端 JSON：
 
@@ -68,8 +68,8 @@ ASR/TTS 权重只在启动时加载；连接不各自复制 ASR。每个 live �
 | GET `/`、`/assets/*` | 公共静态界面 | HTML/CSS/JS |
 | GET `/health/live` | 无需登录 | `{"ok":true}`，只证明进程可响应 |
 | GET `/health/ready` | 无需登录 | 200/503，启动时真实模型是否加载 |
-| POST `/api/login` | 同源 Origin；JSON `{code}` | HttpOnly Cookie；访问码从不回显 |
-| GET `/api/session` | Cookie | CSRF、模式能力、上传/会话限制 |
+| POST `/api/login` | 仅 `AUTH_REQUIRED=1` 的兼容模式 | HttpOnly Cookie；默认部署关闭 |
+| GET `/api/session` | 浏览器会话 Cookie（首次访问自动签发） | CSRF、模式能力、上传/会话限制 |
 | POST `/api/logout` | Cookie + Origin + X-CSRF-Token | 清本浏览器 Cookie |
 | POST `/api/transcribe` | Cookie + Origin + CSRF；**raw file body** | `application/x-ndjson` 流 |
 | POST `/api/tts` | Cookie + Origin + CSRF；JSON `{text,speed}` | `audio/wav` |
@@ -78,7 +78,7 @@ ASR/TTS 权重只在启动时加载；连接不各自复制 ASR。每个 live �
 
 TTS 每请求1～120字符，语速0.7～1.2。前端编辑器最多1500字，按标点或60字符切块；最多预取下一块，不一次排队全部长文。本设备不与实时收音并行。TTS 输出在内存中生成，不建立永久音频下载目录。
 
-错误：400 输入/音频无效；401 登录失效；403 同源/CSRF/Host 不符；408 上传或解码超时；413 超出限制；415 JSON Content-Type 不符；429 容量/频率限制；503 功能/推理不可用。WS 错误会尽量先传中文说明再关闭连接。
+错误：400 输入/音频无效；401 兼容登录失效；403 同源/CSRF/Host 不符；408 上传或解码超时；413 超出限制；415 JSON Content-Type 不符；429 容量/频率限制；503 功能/推理不可用。WS 错误会尽量先传中文说明再关闭连接。
 
 ## 延迟与准确率如何解释
 
